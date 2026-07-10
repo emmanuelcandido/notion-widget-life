@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Memento Mori</title>
+<style>
+  :root{
+    --bg: #191919;
+    --card: #2f2f2f;
+    --border: #373737;
+    --text1: rgba(255,255,255,0.87);
+    --text2: rgba(255,255,255,0.60);
+    --text3: rgba(255,255,255,0.40);
+    --track: #3f3f3f;
+    --red: #ff7369;
+    --green: #4dab9a;
+    --orange: #ffa344;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg: #ffffff;
+      --card: #f7f7f5;
+      --border: #e9e9e7;
+      --text1: #37352f;
+      --text2: #787774;
+      --text3: #9b9a97;
+      --track: #e9e9e7;
+      --red: #e03e3e;
+      --green: #0f7b6c;
+      --orange: #d9730d;
+    }
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0;
+    background:var(--bg);
+    font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    color:var(--text1);
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{ max-width:440px; margin:0 auto; padding:14px; }
+  .eyebrow{
+    font-size:11px; font-weight:600; color:var(--text3);
+    letter-spacing:.04em; text-transform:uppercase;
+    margin:18px 0 8px;
+  }
+  .eyebrow:first-child{ margin-top:2px; }
+  .card{
+    background:var(--card); border:1px solid var(--border);
+    border-radius:6px; padding:12px 14px; margin-bottom:8px;
+  }
+  .card-top{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-bottom:2px; }
+  .card-label{ font-size:12px; font-weight:500; color:var(--text2); }
+  .card-value{ font-size:16px; font-weight:600; color:var(--text1); text-align:right; white-space:nowrap; }
+  .card-sub{ font-size:12px; color:var(--text2); margin-bottom:8px; }
+  .card-micro{ font-size:10.5px; color:var(--text3); margin:-4px 0 8px; }
+  .track{ height:5px; background:var(--track); border-radius:3px; overflow:hidden; }
+  .fill{ height:100%; border-radius:3px; }
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+
+<script>
+const DOB = new Date(1998, 4, 24);
+const LIFESPAN_YEARS = 80;
+
+const DOG_LIFESPAN_YEARS = 13;
+const DOGS = [
+  { name: "Tyler", dob: new Date(2015, 0, 1), color: "var(--red)" },
+  { name: "Linda", dob: new Date(2019, 0, 1), color: "var(--green)" }
+];
+
+const now = new Date();
+const MS_DAY = 86400000;
+
+function daysBetween(a, b){ return Math.floor((b - a) / MS_DAY); }
+function humanize(totalDays){
+  if (totalDays <= 0) return "0 meses";
+  const years = Math.floor(totalDays / 365.25);
+  const remDays = totalDays - years * 365.25;
+  const months = Math.max(0, Math.round(remDays / 30.44));
+  const yLabel = years === 1 ? "ano" : "anos";
+  const mLabel = months === 1 ? "mês" : "meses";
+  if (years > 0 && months > 0) return `${years} ${yLabel} e ${months} ${mLabel}`;
+  if (years > 0) return `${years} ${yLabel}`;
+  return `${months} ${mLabel}`;
+}
+function summers(totalDays){ return Math.max(0, Math.floor(totalDays / 365.25)); }
+function quarters(totalDays){ return Math.max(0, Math.floor(totalDays / 91.31)); }
+function weeksOf(totalDays){ return Math.max(0, Math.floor(totalDays / 7)); }
+function calcAge(dob, ref){
+  let age = ref.getFullYear() - dob.getFullYear();
+  const m = ref.getMonth() - dob.getMonth();
+  if (m < 0 || (m === 0 && ref.getDate() < dob.getDate())) age--;
+  return age;
+}
+
+const app = document.getElementById("app");
+function eyebrow(text){
+  const e = document.createElement("div"); e.className = "eyebrow"; e.textContent = text;
+  app.appendChild(e);
+}
+function card({ label, value, sub, micro, pct, color }){
+  const c = document.createElement("div"); c.className = "card";
+  const top = document.createElement("div"); top.className = "card-top";
+  const l = document.createElement("div"); l.className = "card-label"; l.textContent = label;
+  const v = document.createElement("div"); v.className = "card-value"; v.textContent = value;
+  top.appendChild(l); top.appendChild(v);
+  c.appendChild(top);
+  if (sub){
+    const s = document.createElement("div"); s.className = "card-sub"; s.textContent = sub;
+    c.appendChild(s);
+  }
+  if (micro){
+    const mi = document.createElement("div"); mi.className = "card-micro"; mi.textContent = micro;
+    c.appendChild(mi);
+  }
+  const track = document.createElement("div"); track.className = "track";
+  const fill = document.createElement("div"); fill.className = "fill";
+  fill.style.width = Math.min(100, Math.max(0, pct)).toFixed(1) + "%";
+  fill.style.background = color;
+  track.appendChild(fill);
+  c.appendChild(track);
+  app.appendChild(c);
+}
+
+// ── Vida: um único card, o resto é ruído ──
+const death = new Date(DOB); death.setFullYear(DOB.getFullYear() + LIFESPAN_YEARS);
+const daysLived = daysBetween(DOB, now);
+const daysTotal = daysBetween(DOB, death);
+const daysLeft = daysTotal - daysLived;
+const pctUsed = (daysLived / daysTotal) * 100;
+const age = calcAge(DOB, now);
+
+eyebrow("Vida");
+card({
+  label: `${age} anos`,
+  value: pctUsed.toFixed(1) + "%",
+  sub: `${humanize(daysLeft)} restantes`,
+  micro: `~${summers(daysLeft)} verões · ~${quarters(daysLeft)} trimestres`,
+  pct: pctUsed,
+  color: "var(--red)"
+});
+
+// ── Cachorros: semanas em destaque, verões junto, dias discreto ──
+eyebrow("Cachorros");
+DOGS.forEach(d => {
+  const dDeath = new Date(d.dob); dDeath.setFullYear(d.dob.getFullYear() + DOG_LIFESPAN_YEARS);
+  const lived = daysBetween(d.dob, now);
+  const total = daysBetween(d.dob, dDeath);
+  const left = Math.max(0, total - lived);
+  const pct = Math.min(100, (lived / total) * 100);
+  const dAge = calcAge(d.dob, now);
+
+  card({
+    label: `${d.name} · ${dAge} anos`,
+    value: `${weeksOf(left).toLocaleString("pt-BR")} semanas`,
+    sub: `~${summers(left)} verões restantes`,
+    micro: `${left.toLocaleString("pt-BR")} dias`,
+    pct: pct,
+    color: d.color
+  });
+});
+
+// ── Ano / trimestre: progresso operacional (cadência da meta) ──
+const yearStart = new Date(now.getFullYear(), 0, 1);
+const yearEnd = new Date(now.getFullYear() + 1, 0, 1);
+const pctYear = daysBetween(yearStart, now) / daysBetween(yearStart, yearEnd) * 100;
+const daysLeftYear = daysBetween(now, yearEnd);
+
+const qIdx = Math.floor(now.getMonth() / 3);
+const qStart = new Date(now.getFullYear(), qIdx * 3, 1);
+const qEnd = new Date(now.getFullYear(), qIdx * 3 + 3, 1);
+const pctQuarter = daysBetween(qStart, now) / daysBetween(qStart, qEnd) * 100;
+const daysLeftQuarter = daysBetween(now, qEnd);
+
+eyebrow("Ano");
+card({
+  label: `${now.getFullYear()}`,
+  value: pctYear.toFixed(1) + "%",
+  sub: `${daysLeftYear} dias restantes no ano`,
+  pct: pctYear,
+  color: "var(--orange)"
+});
+card({
+  label: `Q${qIdx + 1} ${now.getFullYear()}`,
+  value: pctQuarter.toFixed(1) + "%",
+  sub: `${daysLeftQuarter} dias restantes no trimestre`,
+  pct: pctQuarter,
+  color: "var(--orange)"
+});
+</script>
+</body>
+</html>
